@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/sync-schema.mjs && vite build",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "wrangler deploy",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "db:migrate:local": "wrangler d1 migrations apply kuletxai --local",

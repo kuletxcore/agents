@@ -51,14 +51,9 @@ Schema: `migrations/0001_schema.sql`.
 
 Seed content: `seed/catalog.ts`, imported by `worker/seed.ts`. Dates are computed at seed time. A `meta.seeded` row stops the importer from running twice. If that row is missing, the worker wipes demo tables and seeds again.
 
-Create the remote database and KV namespace, then paste the ids into `wrangler.jsonc` (`database_id` and the KV `id`). The ids in the repo are local placeholders.
+`wrangler.jsonc` names the D1 database `kuletxai` and the KV binding `CONFIG` without account-specific ids. `wrangler deploy` (and Cloudflare Workers Builds) creates those resources on the account if they are missing, then you can paste the printed ids back into the config if you want them pinned.
 
-```bash
-npx wrangler d1 create kuletxai
-npx wrangler kv namespace create CONFIG
-```
-
-Apply the schema remotely (the first request still seeds if the tables are empty):
+Apply the schema remotely after the first deploy (the worker also creates tables and seeds on the first API request if they are empty):
 
 ```bash
 npm run db:migrate:remote
@@ -84,18 +79,18 @@ export CLOUDFLARE_ACCOUNT_ID=your_account_id
 Then:
 
 ```bash
-# 1. Replace database_id and the CONFIG kv id in wrangler.jsonc
-# 2. Apply migrations
+# 1. Apply migrations after the database exists (deploy creates it)
+npm run deploy
 npm run db:migrate:remote
-# 3. Optional secrets
+# 2. Optional secrets
 npx wrangler secret put LLM_API_KEY
 npx wrangler secret put LLM_BASE_URL
 npx wrangler secret put LLM_MODEL
-# 4. Deploy
-npm run deploy
 ```
 
 Cron `0 22 * * *` UTC is 06:00 in Asia/Manila. That tick runs Nightwatch (the dream pass).
+
+Workers Builds can leave the build command empty. Preview runs `npx wrangler preview`, which runs the `build.command` in `wrangler.jsonc` (`npm run build`) and then uploads `dist/client`. D1 and KV are created on that deploy when the bindings have no ids yet. If you set a dashboard build command, use `npm run build`.
 
 ## Screens
 

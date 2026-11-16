@@ -3,8 +3,12 @@
   "name": "agents",
   "compatibility_date": "2026-11-01",
   "main": "./worker/index.ts",
+  "build": {
+    "command": "npm run build"
+  },
   "workers_dev": true,
   "assets": {
+    "directory": "./dist/client",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
@@ -13,14 +17,12 @@
     {
       "binding": "DB",
       "database_name": "kuletxai",
-      "database_id": "11111111-1111-4111-8111-111111111111",
       "migrations_dir": "migrations"
     }
   ],
   "kv_namespaces": [
     {
-      "binding": "CONFIG",
-      "id": "22222222-2222-4222-8222-222222222222"
+      "binding": "CONFIG"
     }
   ],
   "triggers": {
