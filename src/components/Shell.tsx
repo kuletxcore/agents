@@ -17,6 +17,7 @@ const DOCK = [
 ];
 
 const MENU = [
+  { to: "/runs", title: "Runs", sub: "Agents at work" },
   { to: "/graphs", title: "Map", sub: "Knowledge graphs" },
   { to: "/automations", title: "Patrol", sub: "Schedules" },
   { to: "/integrations", title: "Links", sub: "Integrations" },

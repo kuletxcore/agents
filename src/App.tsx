@@ -7,6 +7,7 @@ const Lobby = lazy(() => import("./pages/Lobby"));
 const Dream = lazy(() => import("./pages/Dream"));
 const Agents = lazy(() => import("./pages/Agents"));
 const AgentRoom = lazy(() => import("./pages/AgentRoom"));
+const Runs = lazy(() => import("./pages/Runs"));
 const Missions = lazy(() => import("./pages/Missions"));
 const Skills = lazy(() => import("./pages/Skills"));
 const Memory = lazy(() => import("./pages/Memory"));
@@ -31,6 +32,8 @@ export default function App() {
             <Route path="dream" element={<Dream />} />
             <Route path="agents" element={<Agents />} />
             <Route path="agents/:id" element={<AgentRoom />} />
+            <Route path="runs" element={<Runs />} />
+            <Route path="runs/:id" element={<Runs />} />
             <Route path="missions" element={<Missions />} />
             <Route path="missions/:id" element={<Missions />} />
             <Route path="skills" element={<Skills />} />
