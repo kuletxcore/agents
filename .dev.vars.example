@@ -1,0 +1,5 @@
+# Optional OpenAI-compatible chat. Leave unset for demo mode.
+# Copy to .dev.vars for `npm run dev` (wrangler reads .dev.vars; it is gitignored).
+LLM_BASE_URL=
+LLM_API_KEY=
+LLM_MODEL=
