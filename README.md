@@ -46,9 +46,31 @@ OPERATOR_TOKEN=choose-a-long-random-string
 
 `.dev.vars` is gitignored. The client never receives the key. If the URL or key is missing, or the call fails, the demo adapter answers.
 
+## Kernel (agent runs)
+
+`worker/kernel/` is the part that makes an agent act instead of answer. A run is a loop: the model picks a tool, the worker executes it, the result goes back to the model, until it gives a final answer.
+
+- `tools.ts` is the tool table. Tools are the only way an agent touches D1. Each is `read` or `write`, and `GRANTS` lists which agent may call which.
+- `loop.ts` drives a run. Read tools execute at once. A write tool stops the run in `waiting` until the operator approves or denies that exact call, then the run resumes.
+- `model.ts` makes one model turn against an OpenAI-compatible endpoint. With no key (or no operator token) it uses a scripted planner instead: read memory and missions, propose one write, report. The tools, approvals, and trace are the same either way.
+- `runs` and `run_steps` (`migrations/0002_kernel.sql`) store the transcript and every step, so a run can be inspected and resumed.
+
+| Route | What it does |
+|---|---|
+| `GET /api/runs` | Recent runs, plus each agent and its tools. |
+| `POST /api/runs` | `{ agentId, goal }`. Starts a run and returns its trace. |
+| `GET /api/runs/:id` | One run and its steps. |
+| `POST /api/runs/:id/steps/:stepId` | `{ approve }`. Decides a waiting write call. |
+
+The Runs room (Menu, then Runs) is the UI for this. A run executes inside the request and stops after 8 model turns.
+
+## Agent tooling
+
+`DESIGN.md` is the design direction for UI work. `CLAUDE.md` points coding agents at the antislop skills in `.claude/skills/`, and `.mcp.json` registers the Motion and 21st.dev MCP servers. The 21st server reads its key from `TWENTY_FIRST_API_KEY`.
+
 ## D1 and KV
 
-Schema: `migrations/0001_schema.sql`.
+Schema: the files in `migrations/`, applied in name order.
 
 Seed content: `seed/catalog.ts`, imported by `worker/seed.ts`. Dates are computed at seed time. A `meta.seeded` row stops the importer from running twice. If that row is missing, the worker wipes demo tables and seeds again.
 
@@ -106,12 +128,13 @@ Workers Builds can leave the build command empty. Preview runs `npx wrangler pre
 
 ## Rooms
 
-Lobby, Dream, Missions, Craft (skills), ARONA (agents, ask-all, relay, committee), Cortex (memory), Archive (documents), Map (graphs), Patrol (automations), Links, Log, Inbox, Calendar, Ledger, Settings, and the Briefing wizard.
+Lobby, Dream, Missions, Runs, Craft (skills), ARONA (agents, ask-all, relay, committee), Cortex (memory), Archive (documents), Map (graphs), Patrol (automations), Links, Log, Inbox, Calendar, Ledger, Settings, and the Briefing wizard.
 
 ## Layout
 
 - `src/` Vite + React client
 - `worker/` Hono API, seed, demo dialogue, optional model call
+- `worker/kernel/` agent run loop, tools, model adapter
 - `migrations/` D1 schema
 - `seed/catalog.ts` demo operator content
 
