@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KuletXAI</title>
+    <meta
+      name="description"
+      content="KuletXAI is the agent control plane for spend, memory, skills, missions, and multi-agent dispatch."
+    />
+    <meta property="og:title" content="KuletXAI" />
+    <meta
+      property="og:description"
+      content="Lobby, dream review, memory cortex, and multi-agent dispatch."
+    />
+    <meta name="theme-color" content="#d7ecff" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      try {
+        if (localStorage.getItem("kx-theme") === "night") {
+          document.documentElement.dataset.theme = "night";
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

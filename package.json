@@ -1,0 +1,38 @@
+{
+  "name": "kuletxai",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/sync-schema.mjs && vite build",
+    "deploy": "wrangler deploy",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply kuletxai --local",
+    "db:migrate:remote": "wrangler d1 migrations apply kuletxai --remote",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@fontsource/exo-2": "^5.2.8",
+    "@fontsource/ibm-plex-mono": "^5.2.6",
+    "@fontsource/outfit": "^5.2.8",
+    "hono": "^4.10.7",
+    "motion": "^12.23.24",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router-dom": "^7.9.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.15.3",
+    "@cloudflare/workers-types": "^5.20261113.1",
+    "@tailwindcss/vite": "^4.1.17",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.1.0",
+    "tailwindcss": "^4.1.17",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.2",
+    "wrangler": "^4.46.0"
+  }
+}
