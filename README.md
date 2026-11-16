@@ -35,12 +35,13 @@ Reset local data:
 rm -rf .wrangler
 ```
 
-Optional model (otherwise every chat stays in demo mode). Copy `.dev.vars.example` to `.dev.vars`:
+Optional model (otherwise every chat stays in demo mode). Copy `.dev.vars.example` to `.dev.vars`. A live call also needs `OPERATOR_TOKEN`. The public site will not spend that key unless Settings has the same token for the current tab:
 
 ```bash
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_API_KEY=sk-...
 LLM_MODEL=gpt-4o-mini
+OPERATOR_TOKEN=choose-a-long-random-string
 ```
 
 `.dev.vars` is gitignored. The client never receives the key. If the URL or key is missing, or the call fails, the demo adapter answers.
@@ -86,6 +87,7 @@ npm run db:migrate:remote
 npx wrangler secret put LLM_API_KEY
 npx wrangler secret put LLM_BASE_URL
 npx wrangler secret put LLM_MODEL
+npx wrangler secret put OPERATOR_TOKEN
 ```
 
 Cron `0 22 * * *` UTC is 06:00 in Asia/Manila. That tick runs Nightwatch (the dream pass).

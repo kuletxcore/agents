@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { agentName, demoReply, maybeModelReply } from "./dialogue";
+import { llmMode, tooMany } from "./gate";
 import type { Env } from "./env";
 import { OP } from "./env";
 import { ensureReady } from "./seed";
@@ -98,12 +99,11 @@ app.get("/api/health", async (c) => {
       .bind(OP)
       .all(),
   ]);
-  const live = Boolean(c.env.LLM_API_KEY && c.env.LLM_BASE_URL);
   return c.json({
     ok: true,
     d1: true,
     mode: "demo",
-    llm: live ? "live" : "demo",
+    llm: llmMode(c.env, c.req.header("x-kuletx-token")),
     hud: {
       budgetLeft: budget ? Math.round((budget.cap - budget.used) * 100) / 100 : 0,
       budgetCap: budget?.cap ?? 0,
@@ -578,7 +578,7 @@ app.get("/api/agents", async (c) => {
     primaryAgent: cfg.primaryAgent ?? "marshal",
     dispatchMode: cfg.dispatchMode ?? "ask-all",
     committee: cfg.committee ?? catalogDefaultCommittee(),
-    llm: c.env.LLM_API_KEY && c.env.LLM_BASE_URL ? "live" : "demo",
+    llm: llmMode(c.env, c.req.header("x-kuletx-token")),
   });
 });
 
@@ -613,10 +613,14 @@ app.get("/api/agents/:id/messages", async (c) => {
 });
 
 app.post("/api/agents/:id/messages", async (c) => {
+  if (tooMany(c.req.header("cf-connecting-ip") ?? "", "chat")) {
+    return c.json({ error: "Too many messages. Wait a minute and try again." }, 429);
+  }
   const id = c.req.param("id");
   const body = (await c.req.json()) as { body?: string };
   const prompt = (body.body || "").trim();
   if (!prompt) return c.json({ error: "empty message" }, 400);
+  const mode = llmMode(c.env, c.req.header("x-kuletx-token"));
   const agent = await c.env.DB.prepare(
     "SELECT id, name, soul, agent_memory FROM agents WHERE id = ?1 AND operator_id = ?2",
   )
@@ -626,8 +630,9 @@ app.post("/api/agents/:id/messages", async (c) => {
   const cfg = await readConfig(c.env);
   const mission = await missionTitle(c.env);
   const reply =
-    (await maybeModelReply(c.env, id, prompt, `${agent.soul}\n${agent.agent_memory}`)) ??
-    demoReply(id, prompt, { shared: cfg.sharedMemory !== false, mission });
+    (mode === "live"
+      ? await maybeModelReply(c.env, id, prompt, `${agent.soul}\n${agent.agent_memory}`)
+      : null) ?? demoReply(id, prompt, { shared: cfg.sharedMemory !== false, mission });
   const threadId = await ensureThread(c.env, id, `Chat with ${agent.name}`);
   const now = new Date().toISOString();
   const userId = crypto.randomUUID();
@@ -642,10 +647,10 @@ app.post("/api/agents/:id/messages", async (c) => {
     c.env.DB.prepare("UPDATE threads SET updated_at = ?1 WHERE id = ?2").bind(now, threadId),
     c.env.DB.prepare("UPDATE agents SET last_active = ?1, status = 'live' WHERE id = ?2").bind(now, id),
   ]);
-  await logActivity(c.env, agent.name, "replied", prompt.slice(0, 80), "ok", c.env.LLM_API_KEY ? 0.02 : 0, 600);
+  await logActivity(c.env, agent.name, "replied", prompt.slice(0, 80), "ok", mode === "live" ? 0.02 : 0, 600);
   return c.json({
     threadId,
-    mode: c.env.LLM_API_KEY && c.env.LLM_BASE_URL ? "live" : "demo",
+    mode,
     messages: [
       { id: userId, role: "user", body: prompt, at: now, agentId: null },
       { id: agentMsgId, role: "agent", body: reply, at: now, agentId: id },
@@ -654,6 +659,9 @@ app.post("/api/agents/:id/messages", async (c) => {
 });
 
 app.post("/api/dispatch", async (c) => {
+  if (tooMany(c.req.header("cf-connecting-ip") ?? "", "dispatch")) {
+    return c.json({ error: "Too many dispatches. Wait a minute and try again." }, 429);
+  }
   const body = (await c.req.json()) as {
     prompt?: string;
     mode?: string;
@@ -684,11 +692,13 @@ app.post("/api/dispatch", async (c) => {
   }
   const mission = await missionTitle(c.env);
   const shared = cfg.sharedMemory !== false;
+  const modeName = llmMode(c.env, c.req.header("x-kuletx-token"));
   const replies = [];
   for (const agent of found) {
     const text =
-      (await maybeModelReply(c.env, agent.id, prompt, `${agent.soul}\n${agent.agent_memory}`)) ??
-      demoReply(agent.id, prompt, { shared, mission });
+      (modeName === "live"
+        ? await maybeModelReply(c.env, agent.id, prompt, `${agent.soul}\n${agent.agent_memory}`)
+        : null) ?? demoReply(agent.id, prompt, { shared, mission });
     const threadId = await ensureThread(c.env, agent.id, `Dispatch`);
     const now = new Date().toISOString();
     await c.env.DB.batch([
@@ -709,7 +719,7 @@ app.post("/api/dispatch", async (c) => {
     mode,
     replies,
     synthesis,
-    llm: c.env.LLM_API_KEY && c.env.LLM_BASE_URL ? "live" : "demo",
+    llm: modeName,
   });
 });
 

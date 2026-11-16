@@ -78,7 +78,7 @@ export default function Agents() {
 
   return (
     <Page
-      kicker={data?.llm === "live" ? "LIVE MODEL" : "DEMO ADAPTER"}
+      kicker={data?.llm === "live" ? "LIVE MODEL" : data?.llm === "gated" ? "MODEL LOCKED" : "DEMO ADAPTER"}
       title="ARONA"
       sub="One desk for the squad. KuletXAI holds the memory. Agents answer here, then you decide what ships."
       action={
