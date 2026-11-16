@@ -4,7 +4,7 @@
   "compatibility_date": "2026-11-01",
   "main": "./worker/index.ts",
   "build": {
-    "command": "npm run build"
+    "command": "npm ci && npm run build"
   },
   "workers_dev": true,
   "assets": {
@@ -17,12 +17,14 @@
     {
       "binding": "DB",
       "database_name": "kuletxai",
+      "database_id": "a8940822-c780-43c5-b2a3-ae5524339dc5",
       "migrations_dir": "migrations"
     }
   ],
   "kv_namespaces": [
     {
-      "binding": "CONFIG"
+      "binding": "CONFIG",
+      "id": "51623e4c5f25471ca25631beb4b54f05"
     }
   ],
   "triggers": {
