@@ -3,9 +3,6 @@
   "name": "agents",
   "compatibility_date": "2026-11-01",
   "main": "./worker/index.ts",
-  "build": {
-    "command": "npm ci && npm run build"
-  },
   "workers_dev": true,
   "assets": {
     "directory": "./dist/client",
@@ -24,10 +21,25 @@
   "kv_namespaces": [
     {
       "binding": "CONFIG",
-      "id": "51623e4c5f25471ca25631beb4b54f05"
+      "id": "8b65f0bf16c64ef68486a1483561687d"
     }
   ],
   "triggers": {
     "crons": ["0 22 * * *"]
+  },
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "kuletxai",
+        "database_id": "a8940822-c780-43c5-b2a3-ae5524339dc5"
+      }
+    ],
+    "kv_namespaces": [
+      {
+        "binding": "CONFIG",
+        "id": "8b65f0bf16c64ef68486a1483561687d"
+      }
+    ]
   }
 }
