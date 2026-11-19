@@ -1,3 +1,4 @@
+import { liveTurn } from "./kernel/model";
 import type { Env } from "./env";
 
 const NAMES: Record<string, string> = {
@@ -52,41 +53,13 @@ export async function maybeModelReply(
   prompt: string,
   soul: string,
 ): Promise<string | null> {
-  const base = env.LLM_BASE_URL?.trim();
-  const key = env.LLM_API_KEY?.trim();
-  if (!base || !key) return null;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 12_000);
   try {
-    const res = await fetch(`${base.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      signal: ctrl.signal,
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: env.LLM_MODEL?.trim() || "gpt-4o-mini",
-        messages: [
-          {
-            role: "system",
-            content: `${soul}\nYou are ${agentName(agentId)} inside KuletXAI. Stay in product scope. Do not invent live account access. If you lack a tool, say the console is answering from the demo vault.`,
-          },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 420,
-        temperature: 0.4,
-      }),
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const text = data.choices?.[0]?.message?.content;
-    return typeof text === "string" && text.trim() ? text.trim() : null;
+    const turn = await liveTurn(env, [
+      { role: 'system', content: `${soul}\nYou are ${agentName(agentId)} inside KuletXAI. Stay in product scope. Do not invent live account access. If you lack a tool, say the console is answering from the demo vault.` },
+      { role: 'user', content: prompt },
+    ], [], 420, 12_000);
+    return turn.content || null;
   } catch {
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }

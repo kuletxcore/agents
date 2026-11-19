@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "db:migrate:local": "wrangler d1 migrations apply kuletxai --local",
     "db:migrate:remote": "wrangler d1 migrations apply kuletxai --remote",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "test:model": "node --experimental-strip-types --test tests/model.test.mjs"
   },
   "dependencies": {
     "@fontsource/exo-2": "^5.2.8",

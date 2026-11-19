@@ -10,48 +10,57 @@ export type ChatMessage =
 
 export type Turn = { content: string; toolCalls: ToolCall[]; tokensIn: number; tokensOut: number };
 
-/** One model turn against any OpenAI-compatible chat-completions endpoint. Throws on failure. */
-export async function liveTurn(env: Env, messages: ChatMessage[], tools: Tool[]): Promise<Turn> {
-  const base = env.LLM_BASE_URL?.trim().replace(/\/$/, "");
+type Block = { type: 'text'; text: string } | { type: 'tool_use'; id: string; name: string; input: unknown } | { type: 'tool_result'; tool_use_id: string; content: string };
+
+function anthropicTranscript(messages: ChatMessage[]) {
+  const turns: { role: 'user' | 'assistant'; content: Block[] }[] = [];
+  for (const m of messages) {
+    if (m.role === 'system') continue;
+    const role = m.role === 'assistant' ? 'assistant' : 'user';
+    const blocks: Block[] = [];
+    if (m.role === 'tool') blocks.push({ type: 'tool_result', tool_use_id: m.tool_call_id, content: m.content });
+    else if (m.content) blocks.push({ type: 'text', text: m.content });
+    if (m.role === 'assistant') for (const c of m.tool_calls ?? []) {
+      blocks.push({ type: 'tool_use', id: c.id, name: c.function.name, input: JSON.parse(c.function.arguments) });
+    }
+    const last = turns.at(-1);
+    if (last?.role === role) last.content.push(...blocks);
+    else turns.push({ role, content: blocks });
+  }
+  return turns;
+}
+
+/** Both chat and the run loop pass through this server-only protocol boundary. */
+export async function liveTurn(env: Env, messages: ChatMessage[], tools: Tool[], maxTokens = 1200, timeout = 45_000): Promise<Turn> {
+  const base = env.LLM_BASE_URL?.trim().replace(/\/+$/, '');
   const key = env.LLM_API_KEY?.trim();
-  if (!base || !key) throw new Error("No model is configured on the worker.");
-  const res = await fetch(`${base}/chat/completions`, {
-    method: "POST",
-    signal: AbortSignal.timeout(45_000),
-    headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: env.LLM_MODEL?.trim() || "gpt-4o-mini",
-      messages,
-      tools: tools.map((t) => ({
-        type: "function",
-        function: { name: t.name, description: t.description, parameters: t.parameters },
-      })),
-      max_tokens: 1200,
+  const protocol = env.LLM_PROTOCOL?.trim() || 'openai';
+  if (!base || !key) throw new Error('No model is configured on the worker.');
+  if (!['openai', 'anthropic'].includes(protocol)) throw new Error('Unsupported LLM_PROTOCOL.');
+  const native = protocol === 'anthropic';
+  const model = env.LLM_MODEL?.trim() || (native ? '' : 'gpt-4o-mini');
+  if (!model) throw new Error('Set LLM_MODEL to a model offered by the provider.');
+  const headers: Record<string, string> = native ? { 'x-api-key': key, 'anthropic-version': '2023-06-01' } : { authorization: `Bearer ${key}` };
+  const res = await fetch(`${base}/${native ? 'messages' : 'chat/completions'}`, {
+    method: 'POST', redirect: 'error', signal: AbortSignal.timeout(timeout), headers: { ...headers, 'content-type': 'application/json' },
+    body: JSON.stringify({ model, max_tokens: maxTokens,
+      ...(native ? { system: messages.filter(m => m.role === 'system').map(m => m.content).join('\n'), messages: anthropicTranscript(messages) } : { messages }),
+      ...(tools.length ? { tools: tools.map(t => native ? { name: t.name, description: t.description, input_schema: t.parameters } : { type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } }) } : {}),
     }),
   });
-  if (!res.ok) {
-    const detail = (await res.text()).slice(0, 300);
-    throw new Error(`Model call failed (${res.status}). ${detail}`);
+  if (!res.ok) throw new Error(`Model request failed (HTTP ${res.status}). Check the endpoint, model ID and credentials.`);
+  if (native) {
+    const data = await res.json() as { content?: Block[]; usage?: { input_tokens: number; output_tokens: number } };
+    if (!Array.isArray(data.content)) throw new Error('Model returned no message.');
+    return { content: data.content.flatMap(b => b.type === 'text' ? [b.text] : []).join('\n').trim(),
+      toolCalls: data.content.flatMap(b => b.type === 'tool_use' ? [{ type: 'function' as const, id: b.id, function: { name: b.name, arguments: JSON.stringify(b.input) } }] : []),
+      tokensIn: data.usage?.input_tokens ?? 0, tokensOut: data.usage?.output_tokens ?? 0 };
   }
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[];
-    usage?: { prompt_tokens?: number; completion_tokens?: number };
-  };
+  const data = await res.json() as { choices?: { message?: { content?: string | null; tool_calls?: ToolCall[] } }[]; usage?: { prompt_tokens?: number; completion_tokens?: number } };
   const message = data.choices?.[0]?.message;
-  if (!message) throw new Error("Model returned no message.");
-  const toolCalls = (message.tool_calls ?? [])
-    .filter((c) => c?.function?.name)
-    .map((c) => ({
-      id: c.id || `call_${crypto.randomUUID().slice(0, 8)}`,
-      type: "function" as const,
-      function: { name: c.function.name, arguments: c.function.arguments || "{}" },
-    }));
-  return {
-    content: typeof message.content === "string" ? message.content.trim() : "",
-    toolCalls,
-    tokensIn: data.usage?.prompt_tokens ?? 0,
-    tokensOut: data.usage?.completion_tokens ?? 0,
-  };
+  if (!message) throw new Error('Model returned no message.');
+  return { content: typeof message.content === 'string' ? message.content.trim() : '', toolCalls: (message.tool_calls ?? []).filter(c => c?.function?.name).map(c => ({ ...c, id: c.id || `call_${crypto.randomUUID()}` })),
+    tokensIn: data.usage?.prompt_tokens ?? 0, tokensOut: data.usage?.completion_tokens ?? 0 };
 }
 
 const STOP = new Set(["about", "after", "before", "check", "could", "every", "should", "their", "there", "these", "this", "what", "which", "with", "would", "that", "from", "have", "into", "please", "status", "write", "summary", "summarize"]);

@@ -2,7 +2,7 @@
 
 KuletXAI is an agent control plane: spend, plan windows, overnight dream cards, a memory cortex, skills priced at an hourly rate, mission handshakes, and a squad you can ask together. The assistant in the console is **ARONA**.
 
-The public demo runs on seeded data. It does not need provider keys. Chat uses a deterministic demo adapter until you set an OpenAI-compatible secret on the worker.
+The public demo runs on seeded data. It does not need provider keys. Chat uses a deterministic demo adapter until you set a supported model endpoint and key on the worker.
 
 Deploy target: [https://agents.kuletxcore.workers.dev](https://agents.kuletxcore.workers.dev) (worker name `agents`, account subdomain `kuletxcore`).
 
@@ -46,13 +46,27 @@ OPERATOR_TOKEN=choose-a-long-random-string
 
 `.dev.vars` is gitignored. The client never receives the key. If the URL or key is missing, or the call fails, the demo adapter answers.
 
+## Bring your own model
+
+Open **Settings → Model connection** (also linked from Lobby). Choose a recipe, copy its template to `.dev.vars`, fill in the provider key and model ID, and restart local development. In production configure the same values as Worker secrets. Enter only the separate operator token in the browser. **Check authorization** checks the Worker gate; it does not ping the provider or validate the model ID.
+
+| Protocol | Base URL example | Models |
+| --- | --- | --- |
+| `openai` (default) | `https://api.openai.com/v1` | Chat Completions models supporting `max_tokens` |
+| `anthropic` | `https://api.anthropic.com/v1` | Claude models on the Messages API; set `LLM_MODEL` explicitly |
+| `openai` | `https://generativelanguage.googleapis.com/v1beta/openai` | Gemini via Google's compatibility endpoint |
+| `openai` | `https://openrouter.ai/api/v1` | Routed models, subject to upstream capabilities |
+| `openai` | Your gateway's compatible base URL | Self-hosted models (e.g. Llama, Qwen, Mistral) via a compatible serving layer |
+
+`LLM_PROTOCOL` selects the wire format, not a model brand. Use a base URL without `/messages` or `/chat/completions`. A deployed Worker needs a reachable endpoint, not your laptop's localhost. Use an authenticated HTTPS gateway for remote self-hosted inference. Chat needs text generation; live agent runs also require function calling and tool-result messages. For other native APIs, use a gateway that implements one of these protocols. Named models in demo squad cards are fixtures, not provider assignments. `AGENTS.md` contains model-neutral instructions for coding assistants.
+
 ## Kernel (agent runs)
 
 `worker/kernel/` is the part that makes an agent act instead of answer. A run is a loop: the model picks a tool, the worker executes it, the result goes back to the model, until it gives a final answer.
 
 - `tools.ts` is the tool table. Tools are the only way an agent touches D1. Each is `read` or `write`, and `GRANTS` lists which agent may call which.
 - `loop.ts` drives a run. Read tools execute at once. A write tool stops the run in `waiting` until the operator approves or denies that exact call, then the run resumes.
-- `model.ts` makes one model turn against an OpenAI-compatible endpoint. With no key (or no operator token) it uses a scripted planner instead: read memory and missions, propose one write, report. The tools, approvals, and trace are the same either way.
+- `model.ts` makes one model turn against the configured protocol. With no key (or no operator token) it uses a scripted planner instead: read memory and missions, propose one write, report. The tools, approvals, and trace are the same either way.
 - `runs` and `run_steps` (`migrations/0002_kernel.sql`) store the transcript and every step, so a run can be inspected and resumed.
 
 | Route | What it does |

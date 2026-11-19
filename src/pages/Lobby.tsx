@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { hello, money, pct, rel } from "../lib/format";
 import { Button, Card, Meter, Ribbon, Sparkline, useCount } from "../components/ui";
@@ -68,7 +68,7 @@ export default function Lobby() {
           <div className="kicker">OPERATOR // KULET · {data.range.toUpperCase()}</div>
           <h1>Lobby</h1>
           <p className="sub">
-            {hello(hour)}, Kulet. {data.memory.notes} notes indexed · demo mode · synced {rel(data.syncedAt)}.
+            {hello(hour)}, Kulet. {data.memory.notes} notes indexed · <Link to="/settings" style={{ textDecoration: "underline" }}>Model connection</Link> · synced {rel(data.syncedAt)}.
           </p>
         </div>
         <div className="seg" role="tablist" aria-label="Range">
