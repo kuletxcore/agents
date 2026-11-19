@@ -93,7 +93,7 @@ export default function Runs() {
     >
       <div className="grid-2">
         <div className="stack">
-          <Card>
+          {!id && <Card>
             <Ribbon>New run</Ribbon>
             <form className="run-form" onSubmit={(e) => { e.preventDefault(); void start(); }}>
               <label>
@@ -108,7 +108,8 @@ export default function Runs() {
               </label>
               <div><Button type="submit" disabled={busy || !goal.trim()}>{busy ? "Working…" : "Start run"}</Button></div>
             </form>
-          </Card>
+          </Card>}
+          {id && <Button tone="ghost" onClick={() => navigate("/runs")}>Start another run</Button>}
 
           {detail ? (
             <Card>

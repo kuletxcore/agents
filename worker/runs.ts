@@ -24,10 +24,10 @@ app.post("/api/runs", async (c) => {
   if (tooMany(c.req.header("cf-connecting-ip") ?? "", "runs", 12)) {
     return c.json({ error: "Too many runs. Wait a minute and try again." }, 429);
   }
-  const body = (await c.req.json().catch(() => ({}))) as { agentId?: string; goal?: string };
+  const body = (await c.req.json().catch(() => ({}))) as { agentId?: string; goal?: string; mode?: string };
   const goal = (body.goal || "").trim().slice(0, 2000);
   if (!goal) return c.json({ error: "Give the agent a goal." }, 400);
-  const mode = llmMode(c.env, c.req.header("x-kuletx-token")) === "live" ? "live" : "demo";
+  const mode = body.mode !== "demo" && llmMode(c.env, c.req.header("x-kuletx-token")) === "live" ? "live" : "demo";
   const id = await startRun(c.env, String(body.agentId || "marshal"), goal, mode);
   if (!id) return c.json({ error: "No agent with that id." }, 404);
   return c.json(await getRun(c.env, id));

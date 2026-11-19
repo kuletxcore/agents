@@ -7,7 +7,7 @@ import { Icon, Mark } from "./Glyph";
 import { Button, useToast } from "./ui";
 
 const DOCK = [
-  { to: "/", label: "Lobby", sub: "Home", icon: "home" },
+  { to: "/", label: "Dispatch", sub: "Home", icon: "home" },
   { to: "/dream", label: "Dream", sub: "Review", icon: "moon" },
   { to: "/missions", label: "Missions", sub: "Goals", icon: "flag" },
   { to: "/skills", label: "Craft", sub: "Skills", icon: "hammer" },

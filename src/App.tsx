@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import Shell from "./components/Shell";
 import { Loading, ToastProvider } from "./components/ui";
 
+const DispatchDesk = lazy(() => import("./pages/DispatchDesk"));
 const Lobby = lazy(() => import("./pages/Lobby"));
 const Dream = lazy(() => import("./pages/Dream"));
 const Agents = lazy(() => import("./pages/Agents"));
@@ -28,7 +29,8 @@ export default function App() {
       <Suspense fallback={<div className="main"><Loading /></div>}>
         <Routes>
           <Route element={<Shell />}>
-            <Route index element={<Lobby />} />
+            <Route index element={<DispatchDesk />} />
+            <Route path="overview" element={<Lobby />} />
             <Route path="dream" element={<Dream />} />
             <Route path="agents" element={<Agents />} />
             <Route path="agents/:id" element={<AgentRoom />} />

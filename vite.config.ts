@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
+  server: { allowedHosts: [".e2b.app"] },
   plugins: [react(), tailwindcss(), cloudflare()],
   build: {
     sourcemap: false,
