@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { api } from "../lib/api";
 import { hello, money, pct, rel } from "../lib/format";
 import { Button, Card, Meter, Ribbon, Sparkline, useCount } from "../components/ui";
@@ -36,6 +36,7 @@ export default function Lobby() {
   const [range, setRange] = useState("7d");
   const [data, setData] = useState<Dash | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { openBoard } = useOutletContext<{ openBoard: () => void }>();
   const navigate = useNavigate();
   const hour = Number(
     new Intl.DateTimeFormat("en-US", { timeZone: "Asia/Manila", hour: "2-digit", hourCycle: "h23" }).format(new Date()),
@@ -79,6 +80,11 @@ export default function Lobby() {
           ))}
         </div>
       </header>
+
+      <button className="switch-entry" onClick={openBoard}>
+        <svg viewBox="0 0 150 70" aria-hidden="true" fill="none" strokeWidth="4"><path stroke="var(--cyan-3)" d="M0 12h42l46 46h62"/><path stroke="var(--yellow)" d="M0 58h40l46-46h64"/><path stroke="white" d="M0 35h150"/><g fill="var(--navy-2)" stroke="white"><circle cx="23" cy="35" r="5"/><circle cx="65" cy="35" r="8"/><circle cx="122" cy="35" r="5"/></g></svg>
+        <span><small>OPERATOR SWITCHBOARD</small><strong>Where do you want to go?</strong></span><b>Find a task →</b>
+      </button>
 
       <div className="grid-3">
         <Kpi label="Spent on AI" value={data.kpis.spent.value} delta={data.kpis.spent.delta} series={data.kpis.spent.series} color="#d4924a" money />

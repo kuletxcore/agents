@@ -120,3 +120,7 @@ Motion uses the `motion` package. It marks arrival and confirms a press, nothing
 5. Tap targets for new controls are at least 44px tall. The older `.btn` (38px) and `.btn.small` (30px) are below that and are a known gap to fix.
 6. No horizontal scroll at 390px wide. Long ids and paths wrap or truncate.
 7. Anything an agent wants to change is shown to the operator in full before it happens, in the yellow "needs you" treatment.
+
+## Operator switchboard
+
+The lobby route diagram, dock Routes button, search icon, `/`, and Ctrl/Cmd+K open the same task directory. The three numbered transit lines group rooms by intent: Delegate, Investigate, Operate. Label every stop with a task first and the room name second. Room matching stays local; record search uses the Worker. The switchboard navigates only and never executes a task.

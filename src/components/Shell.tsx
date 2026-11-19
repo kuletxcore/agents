@@ -3,6 +3,8 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { api, type Health } from "../lib/api";
 import { money } from "../lib/format";
+import Switchboard from "./Switchboard";
+import "./switchboard.css";
 import { Icon, Mark } from "./Glyph";
 import { Button, useToast } from "./ui";
 
@@ -14,19 +16,6 @@ const DOCK = [
   { to: "/agents", label: "ARONA", sub: "Agents", icon: "ring" },
   { to: "/memory", label: "Cortex", sub: "Memory", icon: "cortex" },
   { to: "/documents", label: "Archive", sub: "Docs", icon: "file" },
-];
-
-const MENU = [
-  { to: "/runs", title: "Runs", sub: "Agents at work" },
-  { to: "/graphs", title: "Map", sub: "Knowledge graphs" },
-  { to: "/automations", title: "Patrol", sub: "Schedules" },
-  { to: "/integrations", title: "Links", sub: "Integrations" },
-  { to: "/activity", title: "Log", sub: "Activity" },
-  { to: "/inbox", title: "Inbox", sub: "Triage" },
-  { to: "/calendar", title: "Calendar", sub: "Handshakes" },
-  { to: "/business", title: "Ledger", sub: "Demo finance" },
-  { to: "/settings", title: "Settings", sub: "Operator" },
-  { to: "/setup", title: "Briefing", sub: "Setup wizard" },
 ];
 
 function clock() {
@@ -44,10 +33,7 @@ function clock() {
 export default function Shell() {
   const [health, setHealth] = useState<Health | null>(null);
   const [err, setErr] = useState<string | null>(null);
-  const [menu, setMenu] = useState(false);
-  const [palette, setPalette] = useState(false);
-  const [query, setQuery] = useState("");
-  const [hits, setHits] = useState<{ kind: string; title: string; href: string }[]>([]);
+  const [board, setBoard] = useState(false);
   const [arona, setArona] = useState(false);
   const [line, setLine] = useState("");
   const [chat, setChat] = useState<{ role: string; body: string }[]>([
@@ -71,33 +57,18 @@ export default function Shell() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (e.key === "/" && tag !== "INPUT" && tag !== "TEXTAREA") {
+      const target = e.target as HTMLElement;
+      if (!e.repeat && !e.isComposing && ((e.key === "/" && !target.isContentEditable && !target.closest("input,textarea,select")) || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k"))) {
         e.preventDefault();
-        setPalette(true);
+        setBoard(true);
       }
       if (e.key === "Escape") {
-        setMenu(false);
-        setPalette(false);
         setArona(false);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  useEffect(() => {
-    if (!palette || query.trim().length < 2) {
-      setHits([]);
-      return;
-    }
-    const handle = window.setTimeout(() => {
-      api<{ hits: { kind: string; title: string; href: string }[] }>(`/api/search?q=${encodeURIComponent(query)}`)
-        .then((r) => setHits(r.hits))
-        .catch(() => setHits([]));
-    }, 180);
-    return () => window.clearTimeout(handle);
-  }, [query, palette]);
 
   const hud = health?.hud;
   const sparks = useMemo(
@@ -211,7 +182,7 @@ export default function Shell() {
             <div className="ic"><Icon name="users" size={16} /></div>
             <div className="tx"><em>SQUAD</em><b>{hud?.agentsActive ?? "—"}</b></div>
           </div>
-          <button className="icon-btn" aria-label="Search" onClick={() => setPalette(true)}><Icon name="search" size={18} /></button>
+          <button className="icon-btn" aria-label="Search the switchboard" onClick={() => setBoard(true)}><Icon name="search" size={18} /></button>
           <button className="icon-btn" aria-label="Voice" onClick={listen}><Icon name="mic" size={18} /></button>
           <button className="icon-btn" aria-label="Theme" onClick={toggleTheme}><Icon name="sun" size={18} /></button>
         </div>
@@ -221,7 +192,7 @@ export default function Shell() {
         {err ? (
           <p className="sub">The worker link failed: {err}. Refresh to retry the seed.</p>
         ) : (
-          <Outlet context={{ health }} />
+          <Outlet context={{ health, openBoard: () => setBoard(true) }} />
         )}
       </main>
 
@@ -246,10 +217,10 @@ export default function Shell() {
               <span className="sublabel">{item.sub}</span>
             </NavLink>
           ))}
-          <button className={`dock-item ${menu ? "on" : ""}`} onClick={() => setMenu(true)} aria-label="Open menu">
+          <button className={`dock-item ${board ? "on" : ""}`} onClick={() => setBoard(true)} aria-label="Open switchboard">
             <span className="orb"><Icon name="grid" /></span>
-            <small>Menu</small>
-            <span className="sublabel">System</span>
+            <small>Routes</small>
+            <span className="sublabel">All rooms</span>
           </button>
         </nav>
         <div className="clock-plate">
@@ -262,47 +233,7 @@ export default function Shell() {
         </div>
       </footer>
 
-      <AnimatePresence>
-        {menu ? (
-          <motion.div className="menu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMenu(false)}>
-            <motion.div className="menu-card" onClick={(e) => e.stopPropagation()} initial={{ y: 24, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>
-              <div className="kicker">SYSTEM</div>
-              <h2 style={{ fontFamily: "var(--display)", fontStyle: "italic", fontWeight: 800, fontSize: 36, margin: "4px 0 8px" }}>Menu</h2>
-              {MENU.map((item) => (
-                <div className="menu-row" key={item.to}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <div className="muted">{item.sub}</div>
-                  </div>
-                  <Button small onClick={() => { setMenu(false); navigate(item.to); }}>Open</Button>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {palette ? (
-          <motion.div className="palette" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setPalette(false)}>
-            <div className="palette-card" onClick={(e) => e.stopPropagation()}>
-              <div className="kicker">SEARCH</div>
-              <input className="search-input" autoFocus placeholder="Skills, agents, documents…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Search KuletXAI" />
-              <div style={{ marginTop: 10 }}>
-                {hits.map((h) => (
-                  <button key={h.href + h.title} className="menu-row" style={{ width: "100%", background: "none", borderLeft: 0, borderRight: 0, borderTop: 0, textAlign: "left" }} onClick={() => { setPalette(false); navigate(h.href); }}>
-                    <div>
-                      <strong style={{ fontSize: 18 }}>{h.title}</strong>
-                      <div className="muted">{h.kind}</div>
-                    </div>
-                  </button>
-                ))}
-                {query.length > 1 && hits.length === 0 ? <p className="muted">No matches in the demo index.</p> : null}
-              </div>
-            </div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {board && <Switchboard close={() => setBoard(false)} />}
 
       <AnimatePresence>
         {arona ? (

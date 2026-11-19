@@ -62,7 +62,7 @@ OPERATOR_TOKEN=choose-a-long-random-string
 | `GET /api/runs/:id` | One run and its steps. |
 | `POST /api/runs/:id/steps/:stepId` | `{ approve }`. Decides a waiting write call. |
 
-The Runs room (Menu, then Runs) is the UI for this. A run executes inside the request and stops after 8 model turns.
+The Runs room (Routes → Delegate → Start a run or approve a write) is the UI for this. A run executes inside the request and stops after 8 model turns.
 
 ## Agent tooling
 
