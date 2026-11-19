@@ -1,12 +1,32 @@
 import { Hono } from "hono";
 import { agentName, demoReply, maybeModelReply } from "./dialogue";
-import { llmMode, tooMany } from "./gate";
+import { llmMode, tokenMatches, tooMany } from "./gate";
 import type { Env } from "./env";
 import { OP } from "./env";
 import { ensureReady } from "./seed";
 import { hoursAgo, manilaHour, nextManila } from "./time";
 
 export const app = new Hono<{ Bindings: Env }>();
+
+// The private deployment routes assets as well as API requests through this gate.
+app.use("*", async (c, next) => {
+  if (c.env.WORKSPACE_MODE === "demo") return next();
+  c.header("Cache-Control", "private, no-store");
+  const password = c.env.WORKSPACE_PASSWORD;
+  if (c.env.WORKSPACE_MODE !== "private" || !password) return c.text("Workspace access is not configured.", 503);
+  const authorization = c.req.header("Authorization");
+  if (!tokenMatches(`Basic ${btoa(`operator:${password}`)}`, authorization)) {
+    c.header("WWW-Authenticate", 'Basic realm="KuletXAI operator"');
+    return c.text("Operator sign-in required.", 401);
+  }
+  if (!["GET", "HEAD", "OPTIONS"].includes(c.req.method)) {
+    const origin = c.req.header("Origin");
+    if ((origin && origin !== new URL(c.req.url).origin) || c.req.header("Sec-Fetch-Site") === "cross-site") {
+      return c.text("Cross-origin write refused.", 403);
+    }
+  }
+  await next();
+});
 
 app.use("/api/*", async (c, next) => {
   await ensureReady(c.env);
@@ -738,7 +758,10 @@ app.post("/api/missions/:id/actions/:aid", async (c) => {
   if (!["complete", "active", "pending", "blocked"].includes(status)) {
     return c.json({ error: "bad status" }, 400);
   }
-  await c.env.DB.prepare("UPDATE mission_actions SET status = ?1 WHERE id = ?2").bind(status, aid).run();
+  const updated = await c.env.DB.prepare(`UPDATE mission_actions SET status = ?1 WHERE id = ?2 AND mission_id = ?3
+    AND mission_id IN (SELECT id FROM missions WHERE operator_id = ?4)`)
+    .bind(status, aid, c.req.param("id"), OP).run();
+  if (!updated.meta.changes) return c.json({ error: "Mission action not found." }, 404);
   await logActivity(c.env, "Kulet", "updated mission action", `${aid} → ${status}`);
   return c.json({ ok: true });
 });
@@ -777,14 +800,7 @@ app.post("/api/schedules/:id/run", async (c) => {
     const dream = await runDream(c.env, "run-now");
     return c.json({ ok: true, dream });
   }
-  const clock = SCHEDULE_CLOCK[id] ?? { hour: -1, minute: 0 };
-  await c.env.DB.prepare(
-    "UPDATE schedules SET last_run = ?1, next_run = ?2, status = 'ok' WHERE id = ?3",
-  )
-    .bind(new Date().toISOString(), nextManila(clock.hour, clock.minute, clock.dow), id)
-    .run();
-  await logActivity(c.env, "Nightwatch", "ran schedule", row.name);
-  return c.json({ ok: true });
+  return c.json({ error: "This demo schedule has no executor." }, 501);
 });
 
 app.get("/api/integrations", async (c) => {
@@ -1050,12 +1066,3 @@ function pct(curr: number, prev: number) {
 function catalogDefaultCommittee() {
   return { orchestrator: "Claude Opus", delegates: ["GPT", "Grok", "DeepSeek"], cacheRatio: 0.62 };
 }
-
-const SCHEDULE_CLOCK: Record<string, { hour: number; minute: number; dow?: number }> = {
-  "sched-dream": { hour: 6, minute: 0 },
-  "sched-memory": { hour: 23, minute: 30 },
-  "sched-usage": { hour: -1, minute: 0 },
-  "sched-audit": { hour: 18, minute: 0, dow: 5 },
-  "sched-digest": { hour: 9, minute: 0, dow: 1 },
-  "sched-invoice": { hour: 9, minute: 0 },
-};

@@ -6,12 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "node scripts/sync-schema.mjs && vite build",
-    "deploy": "wrangler deploy",
+    "deploy": "npm run build && wrangler deploy --config dist/agents/wrangler.json",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.worker.json",
     "db:migrate:local": "wrangler d1 migrations apply kuletxai --local",
     "db:migrate:remote": "wrangler d1 migrations apply kuletxai --remote",
-    "cf-typegen": "wrangler types"
+    "cf-typegen": "wrangler types",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run typecheck && npm test && npm run build",
+    "dev:private": "CLOUDFLARE_ENV=private vite",
+    "build:private": "CLOUDFLARE_ENV=private npm run build",
+    "deploy:private": "npm run build:private && wrangler deploy --config dist/agents/wrangler.json"
   },
   "dependencies": {
     "@fontsource/exo-2": "^5.2.8",
@@ -30,6 +35,8 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.0",
+    "esbuild": "0.28.2",
+    "miniflare": "5.20261110.0-beta",
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "vite": "^7.2.2",

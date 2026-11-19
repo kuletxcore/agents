@@ -25,7 +25,8 @@ app.post("/api/runs", async (c) => {
     return c.json({ error: "Too many runs. Wait a minute and try again." }, 429);
   }
   const body = (await c.req.json().catch(() => ({}))) as { agentId?: string; goal?: string };
-  const goal = (body.goal || "").trim().slice(0, 2000);
+  const goal = typeof body?.goal === "string" ? body.goal.trim() : "";
+  if (goal.length > 2000) return c.json({ error: "Goal exceeds 2000 characters." }, 400);
   if (!goal) return c.json({ error: "Give the agent a goal." }, 400);
   const mode = llmMode(c.env, c.req.header("x-kuletx-token")) === "live" ? "live" : "demo";
   const id = await startRun(c.env, String(body.agentId || "marshal"), goal, mode);
@@ -50,6 +51,7 @@ app.post("/api/runs/:id/steps/:stepId", async (c) => {
     return c.json({ error: "This run uses the live model. Enter the operator token in Settings to continue it." }, 403);
   }
   const body = (await c.req.json().catch(() => ({}))) as { approve?: boolean };
+  if (typeof body?.approve !== "boolean") return c.json({ error: "approve must be true or false." }, 400);
   const outcome = await resolveStep(c.env, id, c.req.param("stepId"), body.approve === true);
   if (outcome === "not-pending") return c.json({ error: "That call was already decided." }, 409);
   return c.json(await getRun(c.env, id));

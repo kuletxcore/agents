@@ -1,5 +1,5 @@
 import { app, runDream } from "./api";
-import type { Env } from "./env";
+import { OP, type Env } from "./env";
 import { ensureReady } from "./seed";
 import "./runs";
 
@@ -16,7 +16,8 @@ export default {
     ctx.waitUntil(
       (async () => {
         await ensureReady(env);
-        await runDream(env, "cron");
+        const schedule = await env.DB.prepare("SELECT enabled FROM schedules WHERE id = 'sched-dream' AND operator_id = ?1").bind(OP).first<{ enabled: number }>();
+        if (schedule?.enabled) await runDream(env, "cron");
       })(),
     );
   },

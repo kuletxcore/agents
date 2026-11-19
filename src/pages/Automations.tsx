@@ -28,7 +28,7 @@ export default function Automations() {
                 <td><span className={`tag ${s.status === "ok" ? "ok" : "bad"}`}>{s.enabled ? s.status : "off"}</span></td>
                 <td style={{ display: "flex", gap: 6 }}>
                   <Button small tone="ghost" onClick={() => api(`/api/schedules/${s.id}`, { method: "POST", body: JSON.stringify({ enabled: !s.enabled }) }).then(load).then(() => toast(s.enabled ? "Disabled" : "Enabled"))}>{s.enabled ? "Disable" : "Enable"}</Button>
-                  <Button small onClick={() => api(`/api/schedules/${s.id}/run`, { method: "POST" }).then(load).then(() => toast(`Ran ${s.name}`))}>Run now</Button>
+                  <Button disabled={s.id !== "sched-dream"} small onClick={() => api(`/api/schedules/${s.id}/run`, { method: "POST" }).then(load).then(() => toast(`Ran ${s.name}`))}>{s.id === "sched-dream" ? "Run now" : "Demo only"}</Button>
                 </td>
               </tr>
             ))}

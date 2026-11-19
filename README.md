@@ -46,6 +46,19 @@ OPERATOR_TOKEN=choose-a-long-random-string
 
 `.dev.vars` is gitignored. The client never receives the key. If the URL or key is missing, or the call fails, the demo adapter answers.
 
+## Private single-operator workspace
+
+The default deployment is a **shared, writable demo**. Keep personal data, provider secrets, and real integrations off it. The `private` environment is a different Worker (`agents-private`) with a separate D1 database (`kuletxai-private`) and KV namespace. Never point these bindings at public-demo resources. Both environments start with sample content.
+
+1. Use Node 22.12+ and `npm ci`. For local private mode, copy `.dev.vars.example` to `.dev.vars.private`, set `WORKSPACE_PASSWORD` to a long random ASCII password, and run `npm run dev:private` (POSIX shell).
+2. Sign in at the browser prompt as `operator`. The password protects pages **and** API requests. A private Worker without the password refuses access. Use HTTPS outside local development. This is one shared operator identity, not multi-user authentication. `OPERATOR_TOKEN` is a separate opt-in for model spending, not the workspace password.
+3. For a remote installation run `npm run deploy:private`, then `npx wrangler secret put WORKSPACE_PASSWORD --env private --config wrangler.jsonc`. Verify the private Worker name and bindings before storing data. Set any optional model secrets on that same private environment only.
+4. Open **Runs**, select **Keeper**, and ask it to review memory and missions. In scripted mode it proposes a document. Reopen the run from Recent runs: **Approve** files it in Archive; **Deny** leaves Archive unchanged. No model key is needed.
+
+**Operational limits:** Waiting for a decision survives closing the browser. Execution still takes place inside a request: after a Worker interruption, inspect the trace and destination before retrying; a stuck approved step is not safe to replay blindly. The spend HUD is not a billing meter or enforced budget. Nightwatch is the only executable schedule, other schedules are fixtures, and connecting an integration does not perform OAuth.
+
+Run `npm run check` before deployment: it typechecks both targets, exercises the approval flow on local D1, and builds the app.
+
 ## Kernel (agent runs)
 
 `worker/kernel/` is the part that makes an agent act instead of answer. A run is a loop: the model picks a tool, the worker executes it, the result goes back to the model, until it gives a final answer.
@@ -72,7 +85,7 @@ The Runs room (Menu, then Runs) is the UI for this. A run executes inside the re
 
 Schema: the files in `migrations/`, applied in name order.
 
-Seed content: `seed/catalog.ts`, imported by `worker/seed.ts`. Dates are computed at seed time. A `meta.seeded` row stops the importer from running twice. If that row is missing, the worker wipes demo tables and seeds again.
+Seed content: `seed/catalog.ts`, imported by `worker/seed.ts`. Dates are computed at seed time. A `meta.seeded` row stops the importer from running twice. Initialization inserts the fixtures and marker in one D1 transaction. It never clears existing tables. If the marker is missing from a populated database and initialization conflicts, the transaction rolls back: restore from a verified backup rather than resetting the database.
 
 `wrangler.jsonc` names the D1 database `kuletxai` and the KV binding `CONFIG` without account-specific ids. `wrangler deploy` (and Cloudflare Workers Builds) creates those resources on the account if they are missing, then you can paste the printed ids back into the config if you want them pinned.
 

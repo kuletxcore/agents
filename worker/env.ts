@@ -1,4 +1,6 @@
 export interface Env {
+  WORKSPACE_MODE?: string;
+  WORKSPACE_PASSWORD?: string;
   DB: D1Database;
   CONFIG: KVNamespace;
   ASSETS: Fetcher;

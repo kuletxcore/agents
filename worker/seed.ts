@@ -84,17 +84,6 @@ async function seedIfNeeded(env: Env): Promise<void> {
   }
   const seeded = await db.prepare("SELECT value FROM meta WHERE key = 'seeded'").first<{ value: string }>();
   if (seeded?.value === "1") return;
-  const tables = [
-    "meta", "operators", "config", "subscriptions", "usage_windows", "usage_days", "skills", "memories",
-    "memory_edges", "memory_sources", "memory_activity", "dream_templates", "dream_items", "agents",
-    "agent_personas", "threads", "messages", "missions", "mission_actions", "documents", "schedules",
-    "integrations", "knowledge_systems", "projects", "project_clusters", "project_files", "project_qa",
-    "activity", "inbox_items", "calendar_events", "runtimes",
-  ];
-  for (const table of tables) {
-    await db.prepare(`DELETE FROM ${table}`).run();
-  }
-
   const stmts: D1PreparedStatement[] = [];
   const op = catalog.operator;
   stmts.push(
@@ -654,14 +643,16 @@ async function seedIfNeeded(env: Env): Promise<void> {
     );
   }
 
-  const chunk = 40;
-  for (let i = 0; i < stmts.length; i += chunk) {
-    await db.batch(stmts.slice(i, i + chunk));
+  // D1 batches are transactional. Conflicts must never cause a destructive reset.
+  stmts.push(db.prepare("INSERT INTO meta (key, value) VALUES ('seeded', '1')"));
+  try {
+    await db.batch(stmts);
+  } catch (err) {
+    // Another isolate may have initialized the same empty database first.
+    const marker = await db.prepare("SELECT value FROM meta WHERE key = 'seeded'").first<{ value: string }>();
+    if (marker?.value === "1") return;
+    throw err;
   }
-
-  await db.prepare(
-    "INSERT INTO meta (key, value) VALUES ('seeded', '1') ON CONFLICT(key) DO UPDATE SET value = '1'",
-  ).run();
 
   try {
     await env.CONFIG.put(`operator:${OPERATOR_ID}`, JSON.stringify(defaultConfig));

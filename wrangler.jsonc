@@ -11,7 +11,9 @@
     "directory": "./dist/client",
     "not_found_handling": "single-page-application",
     "binding": "ASSETS",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": [
+      "/api/*"
+    ]
   },
   "d1_databases": [
     {
@@ -26,6 +28,42 @@
     }
   ],
   "triggers": {
-    "crons": ["0 22 * * *"]
+    "crons": [
+      "0 22 * * *"
+    ]
+  },
+  "vars": {
+    "WORKSPACE_MODE": "demo"
+  },
+  "env": {
+    "private": {
+      "name": "agents-private",
+      "vars": {
+        "WORKSPACE_MODE": "private"
+      },
+      "assets": {
+        "directory": "./dist/client",
+        "not_found_handling": "single-page-application",
+        "binding": "ASSETS",
+        "run_worker_first": true
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "kuletxai-private",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "kv_namespaces": [
+        {
+          "binding": "CONFIG"
+        }
+      ],
+      "triggers": {
+        "crons": [
+          "0 22 * * *"
+        ]
+      }
+    }
   }
 }

@@ -6,3 +6,7 @@ LLM_BASE_URL=
 LLM_API_KEY=
 LLM_MODEL=
 OPERATOR_TOKEN=
+
+# For dev:private, copy this example to .dev.vars.private (gitignored).
+# Choose a separate long random ASCII password. Do not put it in wrangler.jsonc.
+WORKSPACE_PASSWORD=
